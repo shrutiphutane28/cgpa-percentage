@@ -128,9 +128,11 @@ if action == "Sign Up":
 
 elif action == "Login":
     st.title("Login")
-    name, authentication_status, username = authenticator.login("Login", location='main')
+    name, authentication_status, username = authenticator.login('Login','main')
 
     if authentication_status:
+        authenticator.logout('Logout', 'main')
+        
         st.success(f"Welcome {name}!")
 
         # Get the number of years of CGPA data
@@ -169,10 +171,7 @@ elif action == "Login":
                 st.write(f"Aggregate CGPA: {aggregate_cgpa:.2f}")
                 st.write(f"Aggregate Percentage: {aggregate_percentage:.2f}%")
                 st.write(f"Grade: {grade}")
-    elif authentication_status is False:
-        st.error("Invalid credentials.")
-    else:
-        st.info("Please log in.")
-
-if authenticator.logout("Logout", "sidebar"):
-    st.info("Logged out.")
+    elif authentication_status == False:
+        st.error('Username/password is incorrect')
+    elif authentication_status == None:
+        st.warning('Please enter your username and password')
