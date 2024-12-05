@@ -128,7 +128,7 @@ if action == "Sign Up":
 
 elif action == "Login":
     st.title("Login")
-    name, authentication_status, username = authenticator.login('main')
+    name, authentication_status, username = authenticator.login(location="main")
 
     if authentication_status:
         authenticator.logout('Logout', 'main')
