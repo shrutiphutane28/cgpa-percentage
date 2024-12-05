@@ -5,7 +5,6 @@ import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime
 from dotenv import load_dotenv
-import os
 from passlib.hash import bcrypt
 
 # Load Firebase configuration from Streamlit secrets
@@ -64,41 +63,42 @@ def calculate_grade(aggregate_cgpa):
 
 # Firebase Helper Functions
 def fetch_user_data():
-    ref = db.reference("users")
-    data = ref.get() or {}
-    return {
-        "usernames": [user["username"] for user in data.values()],
-        "names": [user["name"] for user in data.values()],
-        "passwords": [user["password"] for user in data.values()],
-    }
+    try:
+        ref = db.reference("users")
+        data = ref.get() or {}
+        return {user.get("username", ""): {"name": user.get("name", ""), "password": user.get("password", "")} for user in data.values()}
+    except Exception as e:
+        st.error(f"Failed to fetch user data: {e}")
+        return {}
 
 def add_user_to_firebase(username, name, password):
-    hashed_password = bcrypt.hash(password)  # Hash the password using bcrypt
-    ref = db.reference("users")
-    ref.push({
-        "username": username,
-        "name": name,
-        "password": hashed_password  # Store the hashed password
-    })
+    try:
+        hashed_password = bcrypt.hash(password)
+        ref = db.reference("users")
+        ref.push({
+            "username": username,
+            "name": name,
+            "password": hashed_password
+        })
+        return True
+    except Exception as e:
+        st.error(f"Failed to add user: {e}")
+        return False
 
 # Load user data from Firebase
-user_data = fetch_user_data()
-usernames = user_data["usernames"]
-names = user_data["names"]
-passwords = user_data["passwords"]
+users = fetch_user_data()
+if not users:
+    st.warning("No users found in Firebase. Please add users first.")
 
-# Hash passwords using bcrypt
-hashed_passwords = []
-for password in user_data["passwords"]:
-    hashed_passwords.append(bcrypt.hash(password))
+names = [users[user]["name"] for user in users]
+usernames = list(users.keys())
+hashed_passwords = [users[user]["password"] for user in users]
 
 # Setup authenticator
 authenticator = stauth.Authenticate(
-    names=names,
-    usernames=usernames,
-    passwords=hashed_passwords,
+    credentials={"usernames": {usernames[i]: {"name": names[i], "password": hashed_passwords[i]} for i in range(len(usernames))}},
     cookie_name="auth_cookie",
-    key="abc",
+    key="secret_key",
     cookie_expiry_days=30
 )
 
@@ -169,9 +169,11 @@ elif action == "Login":
                 st.write(f"Aggregate CGPA: {aggregate_cgpa:.2f}")
                 st.write(f"Aggregate Percentage: {aggregate_percentage:.2f}%")
                 st.write(f"Grade: {grade}")
+    elif authentication_status is False:
+        st.error("Invalid credentials.")
     else:
-        st.error("Authentication failed. Please check your credentials.")
+        st.info("Please log in.")
 
 if authentication_status:
     if authenticator.logout("Logout", "sidebar"):
-        st.info("You have been logged out.")
+        st.info("Logged out.")
