@@ -6,6 +6,7 @@ from firebase_admin import credentials, db
 from datetime import datetime
 from dotenv import load_dotenv
 import os
+from passlib.hash import bcrypt
 
 # Load Firebase configuration from Streamlit secrets
 firebase_config_json = st.secrets["general"].get("FIREBASE_CONFIG_PATH", None)
@@ -13,7 +14,7 @@ firebase_config_json = st.secrets["general"].get("FIREBASE_CONFIG_PATH", None)
 if firebase_config_json:
     # Parse the JSON string
     firebase_config_dict = json.loads(firebase_config_json, strict=False)
-    
+
     # Initialize Firebase Admin SDK if not already initialized
     if not firebase_admin._apps:
         cred = credentials.Certificate(firebase_config_dict)
@@ -72,7 +73,6 @@ def fetch_user_data():
     }
 
 def add_user_to_firebase(username, name, password):
-    from passlib.hash import bcrypt
     hashed_password = bcrypt.hash(password)  # Hash the password using bcrypt
     ref = db.reference("users")
     ref.push({
@@ -81,8 +81,6 @@ def add_user_to_firebase(username, name, password):
         "password": hashed_password  # Store the hashed password
     })
 
-hashed_passwords = []
-
 # Load user data from Firebase
 user_data = fetch_user_data()
 usernames = user_data["usernames"]
@@ -90,6 +88,7 @@ names = user_data["names"]
 passwords = user_data["passwords"]
 
 # Hash passwords using bcrypt
+hashed_passwords = []
 for password in user_data["passwords"]:
     hashed_passwords.append(bcrypt.hash(password))
 
@@ -176,5 +175,3 @@ elif action == "Login":
 if authentication_status:
     if authenticator.logout("Logout", "sidebar"):
         st.info("You have been logged out.")
-
-
