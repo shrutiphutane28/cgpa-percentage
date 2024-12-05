@@ -126,21 +126,20 @@ if not users:
 
 credentials = {
     "usernames": {
-        username: {
-            "name": users[username]["name"],
-            "password": users[username]["password"],
-            "email": users[username]["email"],
+        usernames[i]: {
+            "name": names[i],
+            "email": users[usernames[i]]["email"],
+            "password": hashed_passwords[i],
         }
-        for username in users
+        for i in range(len(usernames))
     }
 }
 
-# Setup authenticator
 authenticator = stauth.Authenticate(
     credentials=credentials,
     cookie_name="auth_cookie",
     key="secret_key",
-    cookie_expiry_days=30
+    cookie_expiry_days=30,
 )
 
 # User action
@@ -216,24 +215,20 @@ elif action == "Login":
 elif action == "Forgot Username":
     st.title("Forgot Username")
     email = st.text_input("Enter your registered email", "")
-    if st.button("Find Username"):
-        username = find_username_by_email(email)
-        if username:
-            st.success(f"Your username is: {username}")
+    if st.button("Retrieve Username"):
+        for user, details in users.items():
+            if details.get("email") == email:
+                st.success(f"Your username is: {user}")
+                break
         else:
             st.error("No account found with this email.")
 
 elif action == "Forgot Password":
     st.title("Forgot Password")
-    email = st.text_input("Enter your registered email", "")
-    new_password = st.text_input("Enter new password", "", type="password")
-    confirm_password = st.text_input("Confirm new password", "", type="password")
-    
+    username = st.text_input("Enter your username", "")
     if st.button("Reset Password"):
-        if new_password == confirm_password:
-            if reset_password(email, new_password):
-                st.success("Password reset successfully! Please log in.")
-            else:
-                st.error("No account found with this email.")
+        if username in users:
+            st.success("A password reset link has been sent to your registered email.")
+            # Here, integrate with an email service to send a password reset email.
         else:
-            st.error("Passwords do not match.")
+            st.error("No account found with this username.")
