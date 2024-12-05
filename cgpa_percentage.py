@@ -87,8 +87,9 @@ usernames = user_data["usernames"]
 names = user_data["names"]
 passwords = user_data["passwords"]
 
-# Hash passwords using Hasher
-hashed_passwords = stauth.Hasher(passwords).generate()
+# Hash passwords using bcrypt
+for password in user_data["passwords"]:
+    hashed_passwords.append(bcrypt.hash(password))
 
 # Setup authenticator
 authenticator = stauth.Authenticate(
