@@ -174,6 +174,5 @@ elif action == "Login":
     else:
         st.info("Please log in.")
 
-if authentication_status:
-    if authenticator.logout("Logout", "sidebar"):
-        st.info("Logged out.")
+if authenticator.logout("Logout", "sidebar"):
+    st.info("Logged out.")
