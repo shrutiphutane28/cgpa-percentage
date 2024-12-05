@@ -81,6 +81,8 @@ def add_user_to_firebase(username, name, password):
         "password": hashed_password  # Store the hashed password
     })
 
+hashed_passwords = []
+
 # Load user data from Firebase
 user_data = fetch_user_data()
 usernames = user_data["usernames"]
