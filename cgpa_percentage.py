@@ -8,7 +8,7 @@ firebase_config_json = st.secrets["general"].get("FIREBASE_CONFIG_PATH", None)
 
 if firebase_config_json:
     # Parse the JSON string
-    firebase_config_dict = json.loads(firebase_config_json)
+    firebase_config_dict = json.loads(firebase_config_json, strict=False)
     
     # Initialize Firebase Admin SDK if not already initialized
     if not firebase_admin._apps:
