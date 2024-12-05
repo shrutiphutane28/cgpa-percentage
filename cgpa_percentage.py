@@ -143,7 +143,7 @@ authenticator = stauth.Authenticate(
 )
 
 # User action
-action = st.selectbox("Choose an option", ("Login", "Sign Up", "Forgot Username", "Forgot Password"))
+action = st.selectbox("Choose an option", ("Login", "Sign Up"))
 
 if action == "Sign Up":
     st.title("Sign Up")
@@ -211,24 +211,3 @@ elif action == "Login":
         st.error('Username/password is incorrect')
     elif authentication_status == None:
         st.warning('Please enter your username and password')
-        
-elif action == "Forgot Username":
-    st.title("Forgot Username")
-    email = st.text_input("Enter your registered email", "")
-    if st.button("Retrieve Username"):
-        for user, details in users.items():
-            if details.get("email") == email:
-                st.success(f"Your username is: {user}")
-                break
-        else:
-            st.error("No account found with this email.")
-
-elif action == "Forgot Password":
-    st.title("Forgot Password")
-    username = st.text_input("Enter your username", "")
-    if st.button("Reset Password"):
-        if username in users:
-            st.success("A password reset link has been sent to your registered email.")
-            # Here, integrate with an email service to send a password reset email.
-        else:
-            st.error("No account found with this username.")
