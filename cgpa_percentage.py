@@ -66,18 +66,26 @@ def fetch_user_data():
     try:
         ref = db.reference("users")
         data = ref.get() or {}
-        return {user.get("username", ""): {"name": user.get("name", ""), "password": user.get("password", "")} for user in data.values()}
+        return {
+            user.get("username", ""): {
+                "name": user.get("name", ""),
+                "password": user.get("password", ""),
+                "email": user.get("email", ""),
+            }
+            for user in data.values()
+        }
     except Exception as e:
         st.error(f"Failed to fetch user data: {e}")
         return {}
 
-def add_user_to_firebase(username, name, password):
+def add_user_to_firebase(username, name, email, password):
     try:
         hashed_password = bcrypt.hash(password)
         ref = db.reference("users")
         ref.push({
             "username": username,
             "name": name,
+            "email": email,
             "password": hashed_password
         })
         return True
@@ -85,41 +93,71 @@ def add_user_to_firebase(username, name, password):
         st.error(f"Failed to add user: {e}")
         return False
 
+def reset_password(email, new_password):
+    try:
+        ref = db.reference("users")
+        users = ref.get() or {}
+        for key, value in users.items():
+            if value.get("email") == email:
+                hashed_password = bcrypt.hash(new_password)
+                ref.child(key).update({"password": hashed_password})
+                return True
+        return False
+    except Exception as e:
+        st.error(f"Failed to reset password: {e}")
+        return False
+
+def find_username_by_email(email):
+    try:
+        ref = db.reference("users")
+        users = ref.get() or {}
+        for user in users.values():
+            if user.get("email") == email:
+                return user.get("username")
+        return None
+    except Exception as e:
+        st.error(f"Failed to find username: {e}")
+        return None
+
 # Load user data from Firebase
 users = fetch_user_data()
 if not users:
     st.warning("No users found in Firebase. Please add users first.")
 
-names = [users[user]["name"] for user in users]
-usernames = list(users.keys())
-hashed_passwords = [users[user]["password"] for user in users]
+credentials = {
+    "usernames": {
+        username: {
+            "name": users[username]["name"],
+            "password": users[username]["password"],
+            "email": users[username]["email"],
+        }
+        for username in users
+    }
+}
 
 # Setup authenticator
 authenticator = stauth.Authenticate(
-    credentials={"usernames": {usernames[i]: {"name": names[i], "password": hashed_passwords[i]} for i in range(len(usernames))}},
+    credentials=credentials,
     cookie_name="auth_cookie",
     key="secret_key",
     cookie_expiry_days=30
 )
 
-# User sign-up or log-in section
-action = st.selectbox("Choose an option", ("Login", "Sign Up"))
+# User action
+action = st.selectbox("Choose an option", ("Login", "Sign Up", "Forgot Username", "Forgot Password"))
 
 if action == "Sign Up":
     st.title("Sign Up")
     new_username = st.text_input("Username", "")
     new_name = st.text_input("Full Name", "")
+    new_email = st.text_input("Email", "")
     new_password = st.text_input("Password", "", type="password")
     confirm_password = st.text_input("Confirm Password", "", type="password")
 
     if st.button("Create Account"):
         if new_password == confirm_password:
-            # Check if the username already exists
-            if new_username not in usernames:
-                # Add the new user to Firebase
-                add_user_to_firebase(new_username, new_name, new_password)
-
-                # Show success message
+            if new_username not in users:
+                add_user_to_firebase(new_username, new_name, new_email, new_password)
                 st.success("Account created successfully! Please log in.")
             else:
                 st.error("Username already exists. Please choose a different username.")
@@ -132,7 +170,6 @@ elif action == "Login":
 
     if authentication_status:
         authenticator.logout('Logout', 'main')
-        
         st.success(f"Welcome {name}!")
 
         # Get the number of years of CGPA data
@@ -175,3 +212,28 @@ elif action == "Login":
         st.error('Username/password is incorrect')
     elif authentication_status == None:
         st.warning('Please enter your username and password')
+        
+elif action == "Forgot Username":
+    st.title("Forgot Username")
+    email = st.text_input("Enter your registered email", "")
+    if st.button("Find Username"):
+        username = find_username_by_email(email)
+        if username:
+            st.success(f"Your username is: {username}")
+        else:
+            st.error("No account found with this email.")
+
+elif action == "Forgot Password":
+    st.title("Forgot Password")
+    email = st.text_input("Enter your registered email", "")
+    new_password = st.text_input("Enter new password", "", type="password")
+    confirm_password = st.text_input("Confirm new password", "", type="password")
+    
+    if st.button("Reset Password"):
+        if new_password == confirm_password:
+            if reset_password(email, new_password):
+                st.success("Password reset successfully! Please log in.")
+            else:
+                st.error("No account found with this email.")
+        else:
+            st.error("Passwords do not match.")
