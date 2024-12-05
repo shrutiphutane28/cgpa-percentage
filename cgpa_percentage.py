@@ -72,12 +72,13 @@ def fetch_user_data():
     }
 
 def add_user_to_firebase(username, name, password):
-    hashed_password = Hasher([password]).generate()[0]
+    from passlib.hash import bcrypt
+    hashed_password = bcrypt.hash(password)  # Hash the password using bcrypt
     ref = db.reference("users")
     ref.push({
         "username": username,
         "name": name,
-        "password": password
+        "password": hashed_password  # Store the hashed password
     })
 
 # Load user data from Firebase
