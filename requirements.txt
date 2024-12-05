@@ -2,3 +2,4 @@ streamlit
 streamlit-authenticator
 firebase-admin
 python-dotenv
+passlib
