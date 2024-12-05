@@ -1,25 +1,24 @@
 import streamlit as st
-import streamlit_authenticator as stauth
+import json
 import firebase_admin
 from firebase_admin import credentials, db
-from datetime import datetime
-from dotenv import load_dotenv
-import os
 
-# Load environment variables
-load_dotenv()
-firebase_config_path = os.getenv("FIREBASE_CONFIG_PATH")
+# Load Firebase configuration from Streamlit secrets
+firebase_config_json = st.secrets["general"].get("FIREBASE_CONFIG_PATH", None)
 
-# Initialize Firebase Admin SDK
-if firebase_config_path:
-    firebase_config_dict = json.loads(firebase_config_path)  # Convert the string to a dictionary
+if firebase_config_json:
+    # Parse the JSON string
+    firebase_config_dict = json.loads(firebase_config_json)
+    
+    # Initialize Firebase Admin SDK if not already initialized
     if not firebase_admin._apps:
         cred = credentials.Certificate(firebase_config_dict)
         firebase_admin.initialize_app(cred, {
             "databaseURL": "https://cgpa-percentage-default-rtdb.firebaseio.com/"
         })
 else:
-    st.error("Firebase configuration not found. Please set the FIREBASE_CONFIG environment variable.")
+    st.error("Firebase configuration not found. Please set the FIREBASE_CONFIG in secrets.toml.")
+
 
 # Function to calculate percentage from CGPA
 def calculate_percentage(cgpa):
