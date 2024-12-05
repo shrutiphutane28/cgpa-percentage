@@ -1,5 +1,5 @@
 streamlit
-streamlit-authenticator
+streamlit-authenticator==0.1.5
 firebase-admin
 python-dotenv
 passlib==1.7.4
