@@ -185,55 +185,51 @@ if action == "Sign Up":
 
 elif action == "Login":
     st.title("Login")
-    # Ensure login returns a tuple (name, authentication_status, username)
-    result = authenticator.login(location="main")
+    name, authentication_status, username = authenticator.login(location="main")
 
-    # Check if result is None and handle the case
-    if result is None:
-        st.error("Login failed. Please check your credentials.")
-    else:
-        name, authentication_status, username = result
-    
-        if authentication_status:
-            authenticator.logout('Logout', 'main')
-            st.write(f"Welcome {name}, you are logged in as {username}.")
+    if authentication_status:
+        authenticator.logout('Logout', 'main')
+        st.success(f"Welcome {name}!")
 
-            # Get the number of years of CGPA data
-            n = st.number_input("Enter the number of years of CGPA data (1 to 4):", min_value=1, max_value=4, step=1)
-    
-            if n:
-                cgpas = []
-                percentages = []
-                total_percentage = 0
-                total_cgpa = 0
-    
-                # Input CGPAs and calculate percentages
-                for i in range(n):
-                    cgpa = st.number_input(f"Enter CGPA for year {i+1} (4.00 - 10.00):", min_value=4.00, max_value=10.00, step=0.01)
-                    cgpas.append(cgpa)
-                    total_cgpa += cgpa
-    
-                    # Calculate percentage
-                    percentage = calculate_percentage(cgpa)
-                    if percentage == -1:
-                        st.error(f"Invalid CGPA entered for year {i+1}. Please enter a valid CGPA.")
-                        break
-                    percentages.append(percentage)
-                    total_percentage += percentage
-    
-                # Calculate aggregate percentage
-                if len(cgpas) == n:
-                    aggregate_percentage = total_percentage / n
-                    aggregate_cgpa = total_cgpa / n
-                    grade = calculate_grade(aggregate_cgpa)
-    
-                    # Display results
-                    st.subheader("CGPA to Percentage Conversion Results")
-                    for i in range(n):
-                        st.write(f"Year {i+1}: CGPA = {cgpas[i]}, Percentage = {percentages[i]}%")
-                    st.write(f"Aggregate CGPA: {aggregate_cgpa:.2f}")
-                    st.write(f"Aggregate Percentage: {aggregate_percentage:.2f}%")
-                    st.write(f"Grade: {grade}")
+        # Number of years of CGPA data
+        n = st.number_input("Enter the number of years of CGPA data (1 to 4):", min_value=1, max_value=4, step=1)
 
-        else:
-            st.error("Authentication failed.")
+        if n:
+            cgpas = []
+            percentages = []
+            total_cgpa, total_percentage = 0, 0
+
+            # Input CGPAs and calculate percentages
+            for i in range(n):
+                cgpa = st.number_input(
+                    f"Enter CGPA for year {i+1} (4.00 - 10.00):",
+                    min_value=4.00, max_value=10.00, step=0.01,
+                )
+                cgpas.append(cgpa)
+                total_cgpa += cgpa
+
+                percentage = calculate_percentage(cgpa)
+                if percentage == -1:
+                    st.error(f"Invalid CGPA entered for year {i+1}. Please enter a valid CGPA.")
+                    break
+                percentages.append(percentage)
+                total_percentage += percentage
+
+            # Display results if all years are valid
+            if len(cgpas) == n:
+                aggregate_percentage = total_percentage / n
+                aggregate_cgpa = total_cgpa / n
+                grade = calculate_grade(aggregate_cgpa)
+
+                st.subheader("CGPA to Percentage Conversion Results")
+                for i, (cgpa, percentage) in enumerate(zip(cgpas, percentages), start=1):
+                    st.write(f"Year {i}: CGPA = {cgpa}, Percentage = {percentage:.2f}%")
+                st.write(f"Aggregate CGPA: {aggregate_cgpa:.2f}")
+                st.write(f"Aggregate Percentage: {aggregate_percentage:.2f}%")
+                st.write(f"Grade: {grade}")
+
+    elif authentication_status is False:
+        st.error('Username/password is incorrect.')
+        
+    elif authentication_status is None:
+        st.warning('Please enter your username and password.')
