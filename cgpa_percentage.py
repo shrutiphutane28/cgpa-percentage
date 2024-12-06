@@ -93,23 +93,6 @@ def fetch_user_data():
         st.error("Failed to fetch user data. Please try again later.")
         print(f"Error fetching user data: {e}")  # Optional logging
         return {}
-
-def add_default_user():
-    default_user = {
-        "shruti": {
-            "username": "shruti",
-            "name": "Shruti Phutane",
-            "email": "823shruti@gmail.com",
-            "password": bcrypt.hashpw("shruti2801".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        }
-    }
-    
-    # Reference to "users" node in Firebase
-    ref = db.reference("users")
-    
-    # Add default user to Firebase
-    ref.update(default_user)
-    st.success("Default user added successfully!")
     
 import bcrypt
 
@@ -144,32 +127,6 @@ def add_user_to_firebase(username, name, email, password):
         st.error("Failed to add user. Please try again later.")
         print(f"Error adding user: {e}")  # Optional logging for debugging
         return False
-
-# def reset_password(email, new_password):
-#     try:
-#         ref = db.reference("users")
-#         users = ref.get() or {}
-#         for key, value in users.items():
-#             if value.get("email") == email:
-#                 hashed_password = bcrypt.hash(new_password)
-#                 ref.child(key).update({"password": hashed_password})
-#                 return True
-#         return False
-#     except Exception as e:
-#         st.error(f"Failed to reset password: {e}")
-#         return False
-
-# def find_username_by_email(email):
-#     try:
-#         ref = db.reference("users")
-#         users = ref.get() or {}
-#         for user in users.values():
-#             if user.get("email") == email:
-#                 return user.get("username")
-#         return None
-#     except Exception as e:
-#         st.error(f"Failed to find username: {e}")
-#         return None
 
 # Load user data from Firebase
 users = fetch_user_data()
