@@ -62,27 +62,18 @@ def calculate_grade(cgpa):
 # Firebase Helper Functions
 def fetch_user_data():
     try:
-        # Reference to the "users" node in Firebase
         ref = db.reference("users")
-        data = ref.get() or {}  # Fetch data or default to an empty dictionary
-        
-        # Validate and process user data
-        processed_data = {}
-        for key, user in data.items():
-            if isinstance(user, dict):
-                processed_data[user.get("username", key)] = {
-                    "name": user.get("name", ""),
-                    "password": user.get("password", ""),
-                    "email": user.get("email", ""),
-                }
-            else:
-                st.warning(f"Unexpected data format for user: {key}")
-        
-        return processed_data
+        data = ref.get() or {}
+        return {
+            user.get("username", ""): {
+                "name": user.get("name", ""),
+                "password": user.get("password", ""),
+                "email": user.get("email", ""),
+            }
+            for user in data.values()
+        }
     except Exception as e:
-        # Log and display the error
-        st.error("Failed to fetch user data. Please try again later.")
-        print(f"Error fetching user data: {e}")  # Optional logging
+        st.error(f"Failed to fetch user data: {e}")
         return {}
     
 import bcrypt
