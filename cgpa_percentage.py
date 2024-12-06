@@ -161,6 +161,11 @@ if not users:
     st.warning("No users found in Firebase. Please add users first.")
     st.stop()  # Stop further execution if no users are found
 
+usernames = list(users.keys())  # Extract usernames from the `users` dictionary
+names = [users[username]["name"] for username in usernames]
+hashed_passwords = [users[username]["password"] for username in usernames]
+
+# Create credentials for streamlit-authenticator
 credentials = {
     "usernames": {
         usernames[i]: {
