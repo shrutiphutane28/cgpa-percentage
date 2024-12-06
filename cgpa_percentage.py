@@ -94,6 +94,23 @@ def fetch_user_data():
         print(f"Error fetching user data: {e}")  # Optional logging
         return {}
 
+def add_default_user():
+    default_user = {
+        "shruti": {
+            "username": "shruti",
+            "name": "Shruti Phutane",
+            "email": "823shruti@gmail.com",
+            "password": bcrypt.hashpw("shruti2801".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        }
+    }
+    
+    # Reference to "users" node in Firebase
+    ref = db.reference("users")
+    
+    # Add default user to Firebase
+    ref.update(default_user)
+    st.success("Default user added successfully!")
+    
 import bcrypt
 
 def add_user_to_firebase(username, name, email, password):
