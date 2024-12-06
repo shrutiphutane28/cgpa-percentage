@@ -176,13 +176,16 @@ if action == "Sign Up":
 
 elif action == "Login":
     st.title("Login")
-    name, authentication_status, username = authenticator.login(location="main")
+    result = authenticator.login(location="main")
+    
+    if result is not None:
+        name, authentication_status, username = result
+        
+        if authentication_status:
+            authenticator.logout("Logout", "main")
+            st.success(f"Welcome {name}!")
 
-    if authentication_status:
-        authenticator.logout('Logout', 'main')
-        st.success(f"Welcome {name}!")
-
-        # Number of years of CGPA data
+            # Number of years of CGPA data
         n = st.number_input("Enter the number of years of CGPA data (1 to 4):", min_value=1, max_value=4, step=1)
 
         if n:
@@ -218,9 +221,8 @@ elif action == "Login":
                 st.write(f"Aggregate CGPA: {aggregate_cgpa:.2f}")
                 st.write(f"Aggregate Percentage: {aggregate_percentage:.2f}%")
                 st.write(f"Grade: {grade}")
-
-    elif authentication_status is False:
-        st.error('Username/password is incorrect.')
-        
-    elif authentication_status is None:
-        st.warning('Please enter your username and password.')
+                
+        else:
+            st.error("Invalid credentials")
+    else:
+        st.error("Authentication process failed. Please try again.")
