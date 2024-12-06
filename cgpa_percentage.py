@@ -10,7 +10,7 @@ from passlib.hash import bcrypt
 # Load Firebase configuration from Streamlit secrets
 firebase_config_json = st.secrets["general"].get("FIREBASE_CONFIG_PATH", None)
 
-if firebase_config_json:
+if not firebase_admin._apps:
     firebase_config_dict = json.loads(firebase_config_json, strict=False)
 
     # Define the credential using the dictionary loaded from JSON
