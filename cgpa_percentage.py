@@ -212,7 +212,7 @@ if action == "Sign Up":
 elif action == "Login":
     st.title("Login")
     # Ensure login returns a tuple (name, authentication_status, username)
-    result = authenticator.login("Login", "main")
+    result = authenticator.login(location="main")
 
     # Check if result is None and handle the case
     if result is None:
