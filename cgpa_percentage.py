@@ -11,24 +11,12 @@ from passlib.hash import bcrypt
 firebase_config_json = st.secrets["general"].get("FIREBASE_CONFIG_PATH", None)
 
 if firebase_config_json:
-    try:
-        # Parse the JSON string
-        firebase_config_dict = json.loads(firebase_config_json, strict=False)
-    except json.JSONDecodeError:
-        st.error("Invalid Firebase configuration. Ensure it is a valid JSON.")
-        firebase_config_dict = None
+    firebase_config_dict = json.loads(firebase_config_json, strict=False)
 
-    if firebase_config_dict:
-        try:
-            # Initialize Firebase Admin SDK if not already initialized
-            firebase_admin.get_app()
-        except ValueError:
-            cred = credentials.Certificate(firebase_config_dict)
-            firebase_admin.initialize_app(cred, {
-                "databaseURL": "https://cgpa-percentage-default-rtdb.firebaseio.com/"
-            })
-else:
-    st.error("Firebase configuration not found. Please set the FIREBASE_CONFIG in secrets.toml.")
+    red = credentials.Certificate(firebase_config_dict)
+    firebase_admin.initialize_app(cred, {
+        "databaseURL": "https://cgpa-percentage-default-rtdb.firebaseio.com/"
+    })
 
 # Function to calculate percentage from CGPA
 def calculate_percentage(cgpa):
