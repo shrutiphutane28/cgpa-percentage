@@ -11,52 +11,59 @@ from passlib.hash import bcrypt
 firebase_config_json = st.secrets["general"].get("FIREBASE_CONFIG_PATH", None)
 
 if firebase_config_json:
-    # Parse the JSON string
-    firebase_config_dict = json.loads(firebase_config_json, strict=False)
+    try:
+        # Parse the JSON string
+        firebase_config_dict = json.loads(firebase_config_json, strict=False)
+    except json.JSONDecodeError:
+        st.error("Invalid Firebase configuration. Ensure it is a valid JSON.")
+        firebase_config_dict = None
 
-    # Initialize Firebase Admin SDK if not already initialized
-    if not firebase_admin._apps:
-        cred = credentials.Certificate(firebase_config_dict)
-        firebase_admin.initialize_app(cred, {
-            "databaseURL": "https://cgpa-percentage-default-rtdb.firebaseio.com/"
-        })
+    if firebase_config_dict:
+        try:
+            # Initialize Firebase Admin SDK if not already initialized
+            firebase_admin.get_app()
+        except ValueError:
+            cred = credentials.Certificate(firebase_config_dict)
+            firebase_admin.initialize_app(cred, {
+                "databaseURL": "https://cgpa-percentage-default-rtdb.firebaseio.com/"
+            })
 else:
     st.error("Firebase configuration not found. Please set the FIREBASE_CONFIG in secrets.toml.")
 
-
 # Function to calculate percentage from CGPA
 def calculate_percentage(cgpa):
+    if cgpa < 0 or cgpa > 10:
+        return "Invalid CGPA"  # Handle invalid CGPA values
     if cgpa >= 9.50:
         return 20 * cgpa - 100  # Outstanding (O)
-    elif cgpa >= 8.25 and cgpa < 9.50:
+    elif cgpa >= 8.25:
         return 12 * cgpa - 25  # Excellent (A+)
-    elif cgpa >= 6.75 and cgpa < 8.25:
+    elif cgpa >= 6.75:
         return 10 * cgpa - 7.5  # Very Good (A)
-    elif cgpa >= 5.75 and cgpa < 6.75:
+    elif cgpa >= 5.75:
         return 5 * cgpa + 26.25  # Good (B+)
-    elif cgpa >= 5.25 and cgpa < 5.75:
-        return 10 * cgpa - 2.5  # Above Average (B)
-    elif cgpa >= 4.75 and cgpa < 5.25:
-        return 10 * cgpa - 2.5  # Average I (C)
-    elif cgpa >= 4.00 and cgpa < 4.75:
+    elif cgpa >= 4.75:
+        return 10 * cgpa - 2.5  # Above Average (B) or Average I (C)
+    elif cgpa >= 4.00:
         return 6.6 * cgpa + 13.6  # Pass (D)
     else:
-        return -1  # Invalid CGPA
+        return "Invalid CGPA"
 
-def calculate_grade(aggregate_cgpa):
-    if aggregate_cgpa >= 9.50:
+# Function to calculate grade based on CGPA
+def calculate_grade(cgpa):
+    if cgpa < 0 or cgpa > 10:
+        return "Invalid CGPA"  # Handle invalid CGPA values
+    if cgpa >= 9.50:
         return "Outstanding (O)"
-    elif aggregate_cgpa >= 8.25:
+    elif cgpa >= 8.25:
         return "Excellent (A+)"
-    elif aggregate_cgpa >= 6.75:
+    elif cgpa >= 6.75:
         return "Very Good (A)"
-    elif aggregate_cgpa >= 5.75:
+    elif cgpa >= 5.75:
         return "Good (B+)"
-    elif aggregate_cgpa >= 5.25:
+    elif cgpa >= 4.75:
         return "Above Average (B)"
-    elif aggregate_cgpa >= 4.75:
-        return "Average I (C)"
-    elif aggregate_cgpa >= 4.00:
+    elif cgpa >= 4.00:
         return "Pass (D)"
     else:
         return "Invalid CGPA"
@@ -64,65 +71,95 @@ def calculate_grade(aggregate_cgpa):
 # Firebase Helper Functions
 def fetch_user_data():
     try:
+        # Reference to the "users" node in Firebase
         ref = db.reference("users")
-        data = ref.get() or {}
-        return {
-            user.get("username", ""): {
-                "name": user.get("name", ""),
-                "password": user.get("password", ""),
-                "email": user.get("email", ""),
-            }
-            for user in data.values()
-        }
+        data = ref.get() or {}  # Fetch data or default to an empty dictionary
+        
+        # Validate and process user data
+        processed_data = {}
+        for key, user in data.items():
+            if isinstance(user, dict):
+                processed_data[user.get("username", key)] = {
+                    "name": user.get("name", ""),
+                    "password": user.get("password", ""),
+                    "email": user.get("email", ""),
+                }
+            else:
+                st.warning(f"Unexpected data format for user: {key}")
+        
+        return processed_data
     except Exception as e:
-        st.error(f"Failed to fetch user data: {e}")
+        # Log and display the error
+        st.error("Failed to fetch user data. Please try again later.")
+        print(f"Error fetching user data: {e}")  # Optional logging
         return {}
+
+import bcrypt
 
 def add_user_to_firebase(username, name, email, password):
     try:
-        hashed_password = bcrypt.hash(password)
+        # Validate inputs
+        if not username or not name or not email or not password:
+            st.error("All fields are required.")
+            return False
+
+        if "@" not in email or "." not in email.split("@")[-1]:
+            st.error("Invalid email format.")
+            return False
+
+        # Hash the password
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+        # Reference to "users" node in Firebase
         ref = db.reference("users")
-        ref.push({
+
+        # Add user data to Firebase
+        ref.child(username).set({
             "username": username,
             "name": name,
             "email": email,
             "password": hashed_password
         })
+
         return True
     except Exception as e:
-        st.error(f"Failed to add user: {e}")
+        # Log and display a generic error
+        st.error("Failed to add user. Please try again later.")
+        print(f"Error adding user: {e}")  # Optional logging for debugging
         return False
 
-def reset_password(email, new_password):
-    try:
-        ref = db.reference("users")
-        users = ref.get() or {}
-        for key, value in users.items():
-            if value.get("email") == email:
-                hashed_password = bcrypt.hash(new_password)
-                ref.child(key).update({"password": hashed_password})
-                return True
-        return False
-    except Exception as e:
-        st.error(f"Failed to reset password: {e}")
-        return False
+# def reset_password(email, new_password):
+#     try:
+#         ref = db.reference("users")
+#         users = ref.get() or {}
+#         for key, value in users.items():
+#             if value.get("email") == email:
+#                 hashed_password = bcrypt.hash(new_password)
+#                 ref.child(key).update({"password": hashed_password})
+#                 return True
+#         return False
+#     except Exception as e:
+#         st.error(f"Failed to reset password: {e}")
+#         return False
 
-def find_username_by_email(email):
-    try:
-        ref = db.reference("users")
-        users = ref.get() or {}
-        for user in users.values():
-            if user.get("email") == email:
-                return user.get("username")
-        return None
-    except Exception as e:
-        st.error(f"Failed to find username: {e}")
-        return None
+# def find_username_by_email(email):
+#     try:
+#         ref = db.reference("users")
+#         users = ref.get() or {}
+#         for user in users.values():
+#             if user.get("email") == email:
+#                 return user.get("username")
+#         return None
+#     except Exception as e:
+#         st.error(f"Failed to find username: {e}")
+#         return None
 
 # Load user data from Firebase
 users = fetch_user_data()
+
 if not users:
     st.warning("No users found in Firebase. Please add users first.")
+    st.stop()  # Stop further execution if no users are found
 
 credentials = {
     "usernames": {
@@ -147,21 +184,25 @@ action = st.selectbox("Choose an option", ("Login", "Sign Up"))
 
 if action == "Sign Up":
     st.title("Sign Up")
-    new_username = st.text_input("Username", "")
-    new_name = st.text_input("Full Name", "")
-    new_email = st.text_input("Email", "")
-    new_password = st.text_input("Password", "", type="password")
-    confirm_password = st.text_input("Confirm Password", "", type="password")
+    new_username = st.text_input("Username", "").strip()
+    new_name = st.text_input("Full Name", "").strip()
+    new_email = st.text_input("Email", "").strip()
+    new_password = st.text_input("Password", "", type="password").strip()
+    confirm_password = st.text_input("Confirm Password", "", type="password").strip()
 
     if st.button("Create Account"):
-        if new_password == confirm_password:
-            if new_username not in users:
-                add_user_to_firebase(new_username, new_name, new_email, new_password)
+        if not new_username or not new_name or not new_email or not new_password:
+            st.error("All fields are required. Please fill in all details.")
+        elif new_password != confirm_password:
+            st.error("Passwords do not match. Please try again.")
+        elif new_username in users:
+            st.error("Username already exists. Please choose a different username.")
+        else:
+            result = add_user_to_firebase(new_username, new_name, new_email, new_password)
+            if result:
                 st.success("Account created successfully! Please log in.")
             else:
-                st.error("Username already exists. Please choose a different username.")
-        else:
-            st.error("Passwords do not match. Please try again.")
+                st.error("Account creation failed. Please try again.")
 
 elif action == "Login":
     st.title("Login")
@@ -207,7 +248,9 @@ elif action == "Login":
                 st.write(f"Aggregate CGPA: {aggregate_cgpa:.2f}")
                 st.write(f"Aggregate Percentage: {aggregate_percentage:.2f}%")
                 st.write(f"Grade: {grade}")
+
     elif authentication_status == False:
         st.error('Username/password is incorrect')
+
     elif authentication_status == None:
         st.warning('Please enter your username and password')
