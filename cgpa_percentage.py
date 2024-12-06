@@ -13,7 +13,10 @@ firebase_config_json = st.secrets["general"].get("FIREBASE_CONFIG_PATH", None)
 if firebase_config_json:
     firebase_config_dict = json.loads(firebase_config_json, strict=False)
 
-    red = credentials.Certificate(firebase_config_dict)
+    # Define the credential using the dictionary loaded from JSON
+    cred = credentials.Certificate(firebase_config_dict)
+    
+    # Initialize Firebase
     firebase_admin.initialize_app(cred, {
         "databaseURL": "https://cgpa-percentage-default-rtdb.firebaseio.com/"
     })
