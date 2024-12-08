@@ -178,8 +178,8 @@ if action == "Sign Up":
             else:
                 st.error("Account creation failed. Please try again.")
 
-el# Login Action
-if action == "Login":
+# Login Action
+elif action == "Login":
     st.title("Login")
     # Attempt to login
     result = authenticator.login(location="main")
