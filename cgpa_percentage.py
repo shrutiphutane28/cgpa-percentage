@@ -7,11 +7,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 from passlib.hash import bcrypt
 
-import streamlit as st
-import firebase_admin
-from firebase_admin import credentials, db
-import json
-
 # Load Firebase configuration from Streamlit secrets
 firebase_config_json = st.secrets["general"].get("FIREBASE_CONFIG_PATH", None)
 
