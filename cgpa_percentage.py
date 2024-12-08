@@ -7,19 +7,32 @@ from datetime import datetime
 from dotenv import load_dotenv
 from passlib.hash import bcrypt
 
+import streamlit as st
+import firebase_admin
+from firebase_admin import credentials, db
+import json
+
 # Load Firebase configuration from Streamlit secrets
 firebase_config_json = st.secrets["general"].get("FIREBASE_CONFIG_PATH", None)
 
-if not firebase_admin._apps:
-    firebase_config_dict = json.loads(firebase_config_json, strict=False)
+if firebase_config_json:
+    try:
+        # Parse the Firebase configuration JSON
+        firebase_config_dict = json.loads(firebase_config_json, strict=False)
 
-    # Define the credential using the dictionary loaded from JSON
-    cred = credentials.Certificate(firebase_config_dict)
-    
-    # Initialize Firebase
-    firebase_admin.initialize_app(cred, {
-        "databaseURL": "https://cgpa-percentage-default-rtdb.firebaseio.com/"
-    })
+        # Initialize Firebase only if it is not already initialized
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(firebase_config_dict)
+            firebase_admin.initialize_app(cred, {
+                "databaseURL": "https://cgpa-percentage-default-rtdb.firebaseio.com/"
+            })
+        st.success("Firebase initialized successfully.")
+    except json.JSONDecodeError:
+        st.error("Invalid Firebase configuration JSON. Please check your secrets.")
+    except Exception as e:
+        st.error(f"Error initializing Firebase: {e}")
+else:
+    st.error("Firebase configuration not found in Streamlit secrets.")
 
 # Function to calculate percentage from CGPA
 def calculate_percentage(cgpa):
@@ -62,37 +75,37 @@ def calculate_grade(cgpa):
 # Firebase Helper Functions
 def fetch_user_data():
     try:
+        # Reference the "users" node in the Firebase Realtime Database
         ref = db.reference("users")
         data = ref.get() or {}
+
+        # Transform the data into the desired format
         return {
-            user.get("username", ""): {
-                "name": user.get("name", ""),
-                "password": user.get("password", ""),
-                "email": user.get("email", ""),
+            user_id: {
+                "username": user_details.get("username", ""),
+                "name": user_details.get("name", ""),
+                "password": user_details.get("password", ""),
+                "email": user_details.get("email", ""),
             }
-            for user in data.values()
+            for user_id, user_details in data.items()
         }
     except Exception as e:
         st.error(f"Failed to fetch user data: {e}")
         return {}
-    
+
 import bcrypt
 
 def add_user_to_firebase(username, name, email, password):
     try:
-        # Validate inputs
-        if not username or not name or not email or not password:
+        # Basic input validation
+        if not all([username, name, email, password]):
             st.error("All fields are required.")
             return False
 
-        if "@" not in email or "." not in email.split("@")[-1]:
-            st.error("Invalid email format.")
-            return False
-
         # Hash the password
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-        # Reference to "users" node in Firebase
+        # Reference to the "users" node in Firebase
         ref = db.reference("users")
 
         # Add user data to Firebase
@@ -103,11 +116,11 @@ def add_user_to_firebase(username, name, email, password):
             "password": hashed_password
         })
 
+        st.success("User added successfully.")
         return True
+
     except Exception as e:
-        # Log and display a generic error
         st.error("Failed to add user. Please try again later.")
-        print(f"Error adding user: {e}")  # Optional logging for debugging
         return False
 
 # Load user data from Firebase
@@ -124,12 +137,12 @@ hashed_passwords = [users[username]["password"] for username in usernames]
 # Create credentials for streamlit-authenticator
 credentials = {
     "usernames": {
-        usernames[i]: {
-            "name": names[i],
-            "email": users[usernames[i]]["email"],
-            "password": hashed_passwords[i],
+        username: {
+            "name": users[username]["name"],
+            "email": users[username]["email"],
+            "password": users[username]["password"],
         }
-        for i in range(len(usernames))
+        for username in usernames
     }
 }
 
@@ -177,43 +190,43 @@ elif action == "Login":
             st.success(f"Welcome {name}!")
 
             # Number of years of CGPA data
-        n = st.number_input("Enter the number of years of CGPA data (1 to 4):", min_value=1, max_value=4, step=1)
-
-        if n:
-            cgpas = []
-            percentages = []
-            total_cgpa, total_percentage = 0, 0
-
-            # Input CGPAs and calculate percentages
-            for i in range(n):
-                cgpa = st.number_input(
-                    f"Enter CGPA for year {i+1} (4.00 - 10.00):",
-                    min_value=4.00, max_value=10.00, step=0.01,
-                )
-                cgpas.append(cgpa)
-                total_cgpa += cgpa
-
-                percentage = calculate_percentage(cgpa)
-                if percentage == -1:
-                    st.error(f"Invalid CGPA entered for year {i+1}. Please enter a valid CGPA.")
-                    break
-                percentages.append(percentage)
-                total_percentage += percentage
-
-            # Display results if all years are valid
-            if len(cgpas) == n:
-                aggregate_percentage = total_percentage / n
-                aggregate_cgpa = total_cgpa / n
-                grade = calculate_grade(aggregate_cgpa)
-
-                st.subheader("CGPA to Percentage Conversion Results")
-                for i, (cgpa, percentage) in enumerate(zip(cgpas, percentages), start=1):
-                    st.write(f"Year {i}: CGPA = {cgpa}, Percentage = {percentage:.2f}%")
-                st.write(f"Aggregate CGPA: {aggregate_cgpa:.2f}")
-                st.write(f"Aggregate Percentage: {aggregate_percentage:.2f}%")
-                st.write(f"Grade: {grade}")
-                
+            n = st.number_input("Enter the number of years of CGPA data (1 to 4):", min_value=1, max_value=4, step=1)
+    
+            if n:
+                cgpas = []
+                percentages = []
+                total_cgpa, total_percentage = 0, 0
+    
+                # Input CGPAs and calculate percentages
+                for i in range(n):
+                    cgpa = st.number_input(
+                        f"Enter CGPA for year {i+1} (4.00 - 10.00):",
+                        min_value=4.00, max_value=10.00, step=0.01,
+                    )
+                    cgpas.append(cgpa)
+                    total_cgpa += cgpa
+    
+                    percentage = calculate_percentage(cgpa)
+                    if percentage == -1:
+                        st.error(f"Invalid CGPA entered for year {i+1}. Please enter a valid CGPA.")
+                        break
+                    percentages.append(percentage)
+                    total_percentage += percentage
+    
+                # Display results if all years are valid
+                if len(cgpas) == n:
+                    aggregate_percentage = total_percentage / n
+                    aggregate_cgpa = total_cgpa / n
+                    grade = calculate_grade(aggregate_cgpa)
+    
+                    st.subheader("CGPA to Percentage Conversion Results")
+                    for i, (cgpa, percentage) in enumerate(zip(cgpas, percentages), start=1):
+                        st.write(f"Year {i}: CGPA = {cgpa}, Percentage = {percentage:.2f}%")
+                    st.write(f"Aggregate CGPA: {aggregate_cgpa:.2f}")
+                    st.write(f"Aggregate Percentage: {aggregate_percentage:.2f}%")
+                    st.write(f"Grade: {grade}")
+                    
+            else:
+                st.error("Invalid credentials. Please try again.")
         else:
-            st.error("Invalid credentials")
-    else:
-        st.error("Authentication process failed. Please try again.")
+            st.error("Authentication process failed. Please try again.")
