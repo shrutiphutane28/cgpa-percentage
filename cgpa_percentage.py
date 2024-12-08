@@ -9,25 +9,16 @@ from passlib.hash import bcrypt
 import logging
 
 # Load Firebase configuration from Streamlit secrets
-firebase_config_secret = st.secrets.get("FIREBASE_CONFIG_PATH", None)
+firebase_config_secret = st.secrets["general"].get("FIREBASE_CONFIG_PATH", None)
 
 if firebase_config_secret:
     try:
         # Parse the Firebase configuration JSON
         firebase_config_dict = json.loads(firebase_config_secret, strict=False)
 
-        # Validate config structure (optional)
-        if not all(key in firebase_config_dict for key in ["type"]):
-            raise ValueError("Missing required key(s) in Firebase config")
-
         # Initialize Firebase only if it is not already initialized
         if not firebase_admin._apps:
-            if firebase_config_dict["type"] == "certificate":
-                cred = credentials.Certificate(firebase_config_dict)
-            else:
-                # Handle other credential types (e.g., service account)
-                raise NotImplementedError("Unsupported Firebase credential type")
-
+            cred = credentials.Certificate(firebase_config_dict)
             firebase_admin.initialize_app(cred, {
                 "databaseURL": "https://cgpa-percentage-default-rtdb.firebaseio.com/"
             })
