@@ -26,7 +26,6 @@ if firebase_config_json:
             firebase_admin.initialize_app(cred, {
                 "databaseURL": "https://cgpa-percentage-default-rtdb.firebaseio.com/"
             })
-        st.success("Firebase initialized successfully.")
     except json.JSONDecodeError:
         st.error("Invalid Firebase configuration JSON. Please check your secrets.")
     except Exception as e:
@@ -238,5 +237,3 @@ elif action == "Login":
                     st.write(f"Grade: {grade}")
         else:
             st.error("Invalid credentials. Please try again.")
-    else:
-        st.error("Authentication process failed. Please try again.")
