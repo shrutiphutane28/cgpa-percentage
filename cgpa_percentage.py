@@ -9,7 +9,7 @@ from passlib.hash import bcrypt
 import logging
 
 # Load Firebase configuration from Streamlit secrets
-firebase_config_secret = st.secrets.get("FIREBASE_CONFIG", None)
+firebase_config_secret = st.secrets.get("FIREBASE_CONFIG_PATH", None)
 
 if firebase_config_secret:
     try:
