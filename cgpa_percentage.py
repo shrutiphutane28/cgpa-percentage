@@ -178,55 +178,65 @@ if action == "Sign Up":
             else:
                 st.error("Account creation failed. Please try again.")
 
-elif action == "Login":
+el# Login Action
+if action == "Login":
     st.title("Login")
+    # Attempt to login
     result = authenticator.login(location="main")
     
     if result is not None:
         name, authentication_status, username = result
-        
+
         if authentication_status:
-            authenticator.logout("Logout", "main")
-            st.success(f"Welcome {name}!")
+            st.success(f"Welcome {name}!")  # Display a success message
+            authenticator.logout("Logout", "sidebar")
+
+            # Content to show after successful login
+            st.subheader("Welcome to the CGPA Calculator!")
 
             # Number of years of CGPA data
-            n = st.number_input("Enter the number of years of CGPA data (1 to 4):", min_value=1, max_value=4, step=1)
-    
+            n = st.number_input(
+                "Enter the number of years of CGPA data (1 to 4):",
+                min_value=1, max_value=4, step=1,
+            )
+
             if n:
                 cgpas = []
                 percentages = []
                 total_cgpa, total_percentage = 0, 0
-    
+
                 # Input CGPAs and calculate percentages
                 for i in range(n):
                     cgpa = st.number_input(
                         f"Enter CGPA for year {i+1} (4.00 - 10.00):",
                         min_value=4.00, max_value=10.00, step=0.01,
                     )
-                    cgpas.append(cgpa)
-                    total_cgpa += cgpa
-    
-                    percentage = calculate_percentage(cgpa)
-                    if percentage == -1:
-                        st.error(f"Invalid CGPA entered for year {i+1}. Please enter a valid CGPA.")
-                        break
-                    percentages.append(percentage)
-                    total_percentage += percentage
-    
-                # Display results if all years are valid
+                    if cgpa:
+                        cgpas.append(cgpa)
+                        total_cgpa += cgpa
+
+                        percentage = calculate_percentage(cgpa)
+                        if percentage == -1:
+                            st.error(
+                                f"Invalid CGPA entered for year {i+1}. Please enter a valid CGPA."
+                            )
+                            break
+                        percentages.append(percentage)
+                        total_percentage += percentage
+
+                # Display results if valid
                 if len(cgpas) == n:
                     aggregate_percentage = total_percentage / n
                     aggregate_cgpa = total_cgpa / n
                     grade = calculate_grade(aggregate_cgpa)
-    
+
                     st.subheader("CGPA to Percentage Conversion Results")
                     for i, (cgpa, percentage) in enumerate(zip(cgpas, percentages), start=1):
-                        st.write(f"Year {i}: CGPA = {cgpa}, Percentage = {percentage:.2f}%")
+                        st.write(f"Year {i}: CGPA = {cgpa:.2f}, Percentage = {percentage:.2f}%")
                     st.write(f"Aggregate CGPA: {aggregate_cgpa:.2f}")
                     st.write(f"Aggregate Percentage: {aggregate_percentage:.2f}%")
                     st.write(f"Grade: {grade}")
-                    
-            else:
-                st.error("Invalid credentials. Please try again.")
         else:
-            st.error("Authentication process failed. Please try again.")
+            st.error("Invalid credentials. Please try again.")
+    else:
+        st.error("Authentication process failed. Please try again.")
