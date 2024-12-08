@@ -187,7 +187,7 @@ elif action == "Login":
         name, authentication_status, username = result
 
         if authentication_status:
-           stored_hash = users.get(username, {}).get("password", "")
+            stored_hash = users.get(username, {}).get("password", "")
             input_password = st.text_input("Password", "", type="password").strip()
                 
                 # Check if the password matches
